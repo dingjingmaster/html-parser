@@ -16,6 +16,7 @@
 #include "error.h"
 #include "gumbo.h"
 #include "vector.h"
+#include "charset.h"
 #include "attribute.h"
 #include "tokenizer.h"
 #include "insertion-mode.h"
@@ -51,24 +52,15 @@ const GumboOptions kGumboDefaultOptions = {
 };
 
 static const GumboStringPiece kDoctypeHtml = GUMBO_STRING("html");
-static const GumboStringPiece kPublicIdHtml4_0 =
-    GUMBO_STRING("-//W3C//DTD HTML 4.0//EN");
-static const GumboStringPiece kPublicIdHtml4_01 =
-    GUMBO_STRING("-//W3C//DTD HTML 4.01//EN");
-static const GumboStringPiece kPublicIdXhtml1_0 =
-    GUMBO_STRING("-//W3C//DTD XHTML 1.0 Strict//EN");
-static const GumboStringPiece kPublicIdXhtml1_1 =
-    GUMBO_STRING("-//W3C//DTD XHTML 1.1//EN");
-static const GumboStringPiece kSystemIdRecHtml4_0 =
-    GUMBO_STRING("http://www.w3.org/TR/REC-html40/strict.dtd");
-static const GumboStringPiece kSystemIdHtml4 =
-    GUMBO_STRING("http://www.w3.org/TR/html4/strict.dtd");
-static const GumboStringPiece kSystemIdXhtmlStrict1_1 =
-    GUMBO_STRING("http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd");
-static const GumboStringPiece kSystemIdXhtml1_1 =
-    GUMBO_STRING("http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd");
-static const GumboStringPiece kSystemIdLegacyCompat =
-    GUMBO_STRING("about:legacy-compat");
+static const GumboStringPiece kPublicIdHtml4_0 = GUMBO_STRING("-//W3C//DTD HTML 4.0//EN");
+static const GumboStringPiece kPublicIdHtml4_01 = GUMBO_STRING("-//W3C//DTD HTML 4.01//EN");
+static const GumboStringPiece kPublicIdXhtml1_0 = GUMBO_STRING("-//W3C//DTD XHTML 1.0 Strict//EN");
+static const GumboStringPiece kPublicIdXhtml1_1 = GUMBO_STRING("-//W3C//DTD XHTML 1.1//EN");
+static const GumboStringPiece kSystemIdRecHtml4_0 = GUMBO_STRING("http://www.w3.org/TR/REC-html40/strict.dtd");
+static const GumboStringPiece kSystemIdHtml4 = GUMBO_STRING("http://www.w3.org/TR/html4/strict.dtd");
+static const GumboStringPiece kSystemIdXhtmlStrict1_1 = GUMBO_STRING("http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd");
+static const GumboStringPiece kSystemIdXhtml1_1 = GUMBO_STRING("http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd");
+static const GumboStringPiece kSystemIdLegacyCompat = GUMBO_STRING("about:legacy-compat");
 
 // The doctype arrays have an explicit terminator because we want to pass them
 // to a helper function, and passing them as a pointer discards sizeof
@@ -158,7 +150,8 @@ static const GumboStringPiece kLimitedQuirksRequiresSystemIdPublicIdPrefixes[] =
 // Indexed by GumboNamespaceEnum; keep in sync with that.
 static const char * kLegalXmlns[] = {
     "http://www.w3.org/1999/xhtml",
-    "http://www.w3.org/2000/svg", "http://www.w3.org/1998/Math/MathML"
+    "http://www.w3.org/2000/svg",
+    "http://www.w3.org/1998/Math/MathML"
 };
 
 typedef struct _ReplacementEntry
@@ -183,8 +176,7 @@ static const ReplacementEntry kSvgAttributeReplacements[] = {
     // REPLACEMENT_ENTRY("contentstyletype", "contentStyleType"),
     REPLACEMENT_ENTRY("diffuseconstant", "diffuseConstant"),
     REPLACEMENT_ENTRY("edgemode", "edgeMode"),
-    // REPLACEMENT_ENTRY("externalresourcesrequired",
-    // "externalResourcesRequired"),
+    // REPLACEMENT_ENTRY("externalresourcesrequired", "externalResourcesRequired"),
     // REPLACEMENT_ENTRY("filterres", "filterRes"),
     REPLACEMENT_ENTRY("filterunits", "filterUnits"),
     REPLACEMENT_ENTRY("glyphref", "glyphRef"),
@@ -532,8 +524,7 @@ static GumboNode* get_adjusted_current_node(GumboParser * parser)
 // exactly; otherwise, this performs a prefix match to check if any of the
 // elements in haystack start with needle.  This always performs a
 // case-insensitive match.
-static bool is_in_static_list(
-    const char * needle, const GumboStringPiece * haystack, bool exact_match)
+static bool is_in_static_list(const char * needle, const GumboStringPiece * haystack, bool exact_match)
 {
     for (unsigned int i = 0; haystack[i].length > 0; ++i) {
         if ((exact_match && !strcmp(needle, haystack[i].data)) ||
@@ -783,8 +774,7 @@ typedef struct
     int index;
 } InsertionLocation;
 
-InsertionLocation get_appropriate_insertion_location(
-    GumboParser * parser, GumboNode * override_target)
+InsertionLocation get_appropriate_insertion_location(GumboParser * parser, GumboNode * override_target)
 {
     InsertionLocation retval = {override_target, -1};
     if (retval.target == NULL) {
@@ -834,8 +824,7 @@ InsertionLocation get_appropriate_insertion_location(
 
 // Appends a node to the end of its parent, setting the "parent" and
 // "index_within_parent" fields appropriately.
-static void append_node(
-    GumboParser * parser, GumboNode * parent, GumboNode * node)
+static void append_node(GumboParser * parser, GumboNode * parent, GumboNode * node)
 {
     assert(node->parent == NULL);
     assert(node->index_within_parent == -1);
@@ -1124,8 +1113,7 @@ static void insert_text_token(GumboParser * parser, GumboToken * token)
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/complete/tokenization.html#generic-rcdata-element-parsing-algorithm
-static void run_generic_parsing_algorithm(
-    GumboParser * parser, GumboToken * token, GumboTokenizerEnum lexer_state)
+static void run_generic_parsing_algorithm(GumboParser * parser, GumboToken * token, GumboTokenizerEnum lexer_state)
 {
     insert_element_from_token(parser, token);
     gumbo_tokenizer_set_state(parser, lexer_state);
@@ -1320,8 +1308,7 @@ static void clear_active_formatting_elements(GumboParser * parser)
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/complete/tokenization.html#the-initial-insertion-mode
-static GumboQuirksModeEnum compute_quirks_mode(
-    const GumboTokenDocType * doctype)
+static GumboQuirksModeEnum compute_quirks_mode(const GumboTokenDocType * doctype)
 {
     if (doctype->force_quirks || strcmp(doctype->name, kDoctypeHtml.data) ||
         is_in_static_list(
@@ -1514,8 +1501,7 @@ static bool close_table(GumboParser * parser)
 
 // This factors out the clauses relating to "act as if an end tag token with tag
 // name `cell_tag` had been seen".
-static bool close_table_cell(
-    GumboParser * parser, const GumboToken * token, GumboTag cell_tag)
+static bool close_table_cell(GumboParser * parser, const GumboToken * token, GumboTag cell_tag)
 {
     bool result = true;
     generate_implied_end_tags(parser, GUMBO_TAG_LAST);
@@ -4079,8 +4065,7 @@ static bool handle_after_after_body(GumboParser * parser, GumboToken * token)
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/complete/tokenization.html#the-after-after-frameset-insertion-mode
-static bool handle_after_after_frameset(
-    GumboParser * parser, GumboToken * token)
+static bool handle_after_after_frameset(GumboParser * parser, GumboToken * token)
 {
     if (token->type == GUMBO_TOKEN_COMMENT) {
         append_comment_node(parser, get_document_node(parser), token);
@@ -4377,27 +4362,37 @@ static void fragment_parser_init(GumboParser * parser, GumboTag fragment_ctx, Gu
     reset_insertion_mode_appropriately(parser);
 }
 
-GumboOutput* gumbo_parse(const char * buffer)
+GumboOutput* gumbo_parse(const char * buffer, ssize_t bufLen)
 {
-    return gumbo_parse_with_options(
-        &kGumboDefaultOptions, buffer, strlen(buffer));
+    return gumbo_parse_with_options(&kGumboDefaultOptions, buffer, bufLen);
 }
 
-GumboOutput* gumbo_parse_with_options(const GumboOptions * options, const char * buffer, size_t length)
+GumboOutput* gumbo_parse_with_options(const GumboOptions * options, const char* buffer, size_t length)
 {
+    char* outBuf = NULL;
+    ssize_t outBufLen = 0;
+    {
+        char* cs = charset_get_charset_by_buffer(buffer, length);
+        C_FREE_FUNC(cs, free);
+    }
+    charset_trans_charset_to_utf8(buffer, length, &outBuf, &outBufLen);
+
+    {
+        char* cs = charset_get_charset_by_buffer(outBuf, outBufLen);
+        C_FREE_FUNC(cs, free);
+    }
+
     GumboParser parser;
     parser._options = options;
     output_init(&parser);
-    gumbo_tokenizer_state_init(&parser, buffer, length);
+    gumbo_tokenizer_state_init(&parser, outBuf, outBufLen);
     parser_state_init(&parser);
 
     if (options->fragment_context != GUMBO_TAG_LAST) {
-        fragment_parser_init(
-            &parser, options->fragment_context, options->fragment_namespace);
+        fragment_parser_init(&parser, options->fragment_context, options->fragment_namespace);
     }
 
     GumboParserState * state = parser._parser_state;
-    gumbo_debug("Parsing %.*s.\n", length, buffer);
 
     // Sanity check so that infinite loops die with an assertion failure instead
     // of hanging the process before we ever get an error.

@@ -20,6 +20,9 @@ file(GLOB GUMBO_C_SRC
         ${CMAKE_SOURCE_DIR}/c/vector.h
         ${CMAKE_SOURCE_DIR}/c/vector.c
 
+        ${CMAKE_SOURCE_DIR}/c/charset.h
+        ${CMAKE_SOURCE_DIR}/c/charset.c
+
         ${CMAKE_SOURCE_DIR}/c/char-ref.h
         ${CMAKE_SOURCE_DIR}/c/char-ref.c
 

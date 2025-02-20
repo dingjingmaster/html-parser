@@ -8,6 +8,16 @@
 
 C_BEGIN_EXTERN_C
 
+#ifdef GUMBO_DEBUG
+#define GUMBO_LOG_DEBUG(...) \
+    C_STMT_START { \
+        printf ("%s:%d %s ", __FILE__, __LINE__, __func__); \
+        printf (__VA_ARGS__); \
+        printf ("\n"); \
+} C_STMT_END
+#endif
+
+
 typedef struct GumboInternalNode GumboNode;
 
 typedef void*   (*GumboAllocatorFunction)   (void * userdata, size_t size);
@@ -346,7 +356,7 @@ const char*     gumbo_normalize_svg_tagname     (const GumboStringPiece * tagnam
 GumboTag        gumbo_tag_enum                  (const char * tagname);
 GumboTag        gumbo_tagn_enum                 (const char * tagname, unsigned int length);
 GumboAttribute* gumbo_get_attribute             (const GumboVector * attrs, const char * name);
-GumboOutput*    gumbo_parse                     (const char * buffer);
+GumboOutput*    gumbo_parse                     (const char * buffer, ssize_t bufLen);
 GumboOutput*    gumbo_parse_with_options        (const GumboOptions * options, const char * buffer, size_t buffer_length);
 void            gumbo_destroy_output            (const GumboOptions * options, GumboOutput * output);
 

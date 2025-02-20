@@ -2,24 +2,43 @@
 // Created by dingjing on 2/19/25.
 //
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/stat.h>
 
 #include "../c/gumbo.h"
 
-static void read_file(FILE * fp, char ** output, int * length)
+static void read_file(const char* filePath, char** output, off_t* length)
 {
-    struct stat filestats;
-    int fd = fileno(fp);
-    fstat(fd, &filestats);
-    *length = filestats.st_size;
-    *output = malloc(*length + 1);
-    int start = 0;
-    int bytes_read;
-    while ((bytes_read = fread(*output + start, 1, *length - start, fp))) {
-        start += bytes_read;
+    struct stat fileStats;
+
+    if (0 != stat(filePath, &fileStats)) {
+        printf("fstat failed\n");
+        return;
     }
+
+    const int32_t len = fileStats.st_size;
+    const int fd = open(filePath, O_RDONLY);
+    if (fd < 0) {
+        printf("File %s not found!\n", filePath);
+        exit(EXIT_FAILURE);
+    }
+
+    char* outputT = malloc(len + 1);
+    memset(outputT, 0, len + 1);
+
+    const ssize_t size = read(fd, outputT, len);
+    if (size < 0) {
+        printf("Read error[%d]: %s\n", size, strerror(errno));
+    }
+    close(fd);
+
+    *output = outputT;
+    *length = len;
 }
 
 static const char* find_title(const GumboNode * root)
@@ -63,17 +82,11 @@ int main(int argc, const char ** argv)
     }
     const char * filename = argv[1];
 
-    FILE * fp = fopen(filename, "r");
-    if (!fp) {
-        printf("File %s not found!\n", filename);
-        exit(EXIT_FAILURE);
-    }
+    char* input = NULL;
+    off_t input_length = 0;
+    read_file(filename, &input, &input_length);
 
-    char * input;
-    int input_length;
-    read_file(fp, &input, &input_length);
-    GumboOutput * output = gumbo_parse_with_options(
-        &kGumboDefaultOptions, input, input_length);
+    GumboOutput * output = gumbo_parse_with_options(&kGumboDefaultOptions, input, input_length);
     const char * title = find_title(output->root);
     printf("%s\n", title);
     gumbo_destroy_output(&kGumboDefaultOptions, output);

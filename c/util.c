@@ -36,7 +36,7 @@ char* gumbo_copy_stringz(GumboParser * parser, const char * str)
 // to use.
 void gumbo_debug(const char * format, ...)
 {
-#ifdef GUMBO_DEBUG
+#if 0
     va_list args;
     va_start(args, format);
     vprintf(format, args);
