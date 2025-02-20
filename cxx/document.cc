@@ -12,7 +12,7 @@ html::Document::Document()
 void html::Document::parse(const std::string& aInput)
 {
     reset();
-    mpOutput = gumbo_parse(aInput.c_str());
+    mpOutput = gumbo_parse(aInput.c_str(), aInput.length());
 }
 
 html::Document::~Document()
